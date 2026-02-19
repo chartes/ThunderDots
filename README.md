@@ -1,13 +1,10 @@
-<p align="center">
-  <img src="assets/dots-light.png" alt="ThunderDots logo" width="220"/>
-</p>
+<h1 align="center">
+  <img src="assets/dots-light.png" width="450"><br>
+  ThunderDoTS Fast DTS Crawler via <img src="assets/dots-logo-retro.drawio.png" height="40">
+</h1>
 
-<p align="center">
-  <b>
-    ThunderDoTS: Fast DTS Crawler via
-    <img src="assets/dots-logo-retro.drawio.png" alt="DoTS" height="22" style="vertical-align: -9px;" />
-  </b>
-</p>
+
+
 
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![ruff](https://img.shields.io/badge/lint-ruff-0A0A0A?logo=ruff&logoColor=white)](https://img.shields.io/badge/lint-ruff-0A0A0A?logo=ruff&logoColor=white)
