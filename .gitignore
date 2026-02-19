@@ -25,3 +25,4 @@ project_dump.txt
 dump_project.py
 specs
 out_results/
+thunderdots/native/build/*
