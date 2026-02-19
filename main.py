@@ -7,7 +7,6 @@ ThunderDots interface.
 
 import os
 import datetime
-import yappi
 
 from thunderdots import ThunderDots
 

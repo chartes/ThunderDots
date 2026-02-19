@@ -32,10 +32,10 @@ jobs:
         run: uv sync
 
       - name: Ruff format (check)
-        run: uv run ruff format --check thunderdots
+        run: uv run ruff format --check
 
       - name: Ruff lint
-        run: uv run ruff check thunderdots
+        run: uv run ruff check
 
   go-build:
     name: Go native lib (${{ matrix.os }})
