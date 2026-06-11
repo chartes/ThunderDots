@@ -1,8 +1,20 @@
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "thunderdots"
-version = "0.1.0"
+dynamic = ["version"]
 description = "ThunderDots is a Python client for DTS (Distributed Text Services) endpoints, initially built for DoTS."
+readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "Lucas Terriel" },
+    { name = "École nationale des chartes - PSL" }
+]
+keywords = ["dts", "tei", "xml", "digital-humanities", "corpus", "dots"]
+
 dependencies = [
     "edtf>=5.0.1",
     "h2>=4.3.0",
@@ -17,6 +29,8 @@ dependencies = [
 dev = [
     "pytest>=9.0.2",
     "ruff>=0.15.1",
+    "build",
+    "twine",
 ]
 
 docs = [
@@ -30,6 +44,20 @@ docs = [
 all = [
     "thunderdots[dev,docs]",
 ]
+
+[project.urls]
+Homepage = "https://github.com/chartes/thunderdots"
+Repository = "https://github.com/chartes/thunderdots"
+Documentation = "https://chartes.github.io/thunderdots/"
+Issues = "https://github.com/chartes/thunderdots/issues"
+
+[tool.setuptools.packages.find]
+include = ["thunderdots*"]
+
+[tool.setuptools_scm]
+version_file = "thunderdots/__version__.py"
+version_scheme = "guess-next-dev"
+local_scheme = "no-local-version"
 
 [tool.ruff]
 line-length = 100

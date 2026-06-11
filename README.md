@@ -20,6 +20,9 @@
   <a href="https://github.com/chartes/thunderdots/blob/master/LICENSE.md">
     <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT">
   </a>
+<a href="https://pypi.org/project/thunderdots/">
+  <img src="https://img.shields.io/pypi/v/thunderdots.svg" alt="PyPI version">
+</a>
 </p>
 
 ---
@@ -127,6 +130,10 @@ ruff check
 mkdocs build --strict -f mkdocs/mkdocs.yml
 ```
 
+### Create a new PyPI release
+
+Check the [release checklist](./RELEASE.md) for details.
+
 ### License
 
 ThunderDots is distributed under the [MIT License](./LICENSE.md).
@@ -141,8 +148,9 @@ If you use ThunderDots in academic work, please cite it as:
   title        = {ThunderDots},
   year         = {2026},
   publisher    = {GitHub},
+  institution  = {{École nationale des chartes}},
   url          = {https://github.com/chartes/thunderdots},
-  note         = {Python client for Distributed Text Services endpoints via DoTS}
+  note         = {Python client for Distributed Text Services (DTS) via DoTS}
 }
 ```
 

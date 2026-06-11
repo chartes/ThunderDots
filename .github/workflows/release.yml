@@ -21,9 +21,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Setup Python
         run: uv python install 3.12
@@ -31,30 +35,62 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --dev
 
-      - name: Check release tag matches pyproject version
+      - name: Check release tag format
         run: |
           uv run python - <<'PY'
           import os
-          import tomllib
-          from pathlib import Path
+          import re
 
           tag = os.environ["GITHUB_REF_NAME"]
-          tag_version = tag[1:] if tag.startswith("v") else tag
 
-          pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
-          project_version = pyproject["project"]["version"]
-
-          if tag_version != project_version:
+          if not re.fullmatch(r"v\d+\.\d+\.\d+([a-zA-Z0-9.\-]+)?", tag):
               raise SystemExit(
-                  f"Release tag '{tag}' does not match pyproject.toml version "
-                  f"'{project_version}'. Expected GitHub release tag: v{project_version}"
+                  f"Invalid release tag '{tag}'. Expected something like v0.1.0"
               )
 
-          print(f"Version check OK: {tag} matches pyproject.toml version {project_version}")
+          print(f"Release tag format OK: {tag}")
           PY
 
       - name: Build package
         run: uv build
+
+      - name: Check built package version
+        run: |
+          uv run python - <<'PY'
+          import os
+          import zipfile
+          from pathlib import Path
+          from email.parser import Parser
+
+          tag = os.environ["GITHUB_REF_NAME"]
+          expected = tag[1:] if tag.startswith("v") else tag
+
+          wheels = list(Path("dist").glob("*.whl"))
+          if not wheels:
+              raise SystemExit("No wheel found in dist/")
+
+          wheel = wheels[0]
+          with zipfile.ZipFile(wheel) as zf:
+              metadata_name = next(
+                  name for name in zf.namelist()
+                  if name.endswith(".dist-info/METADATA")
+              )
+              metadata = Parser().parsestr(
+                  zf.read(metadata_name).decode("utf-8")
+              )
+
+          actual = metadata["Version"]
+
+          if actual != expected:
+              raise SystemExit(
+                  f"Built package version '{actual}' does not match release tag '{tag}'"
+              )
+
+          print(f"Built package version OK: {actual}")
+          PY
+
+      - name: Check package metadata
+        run: uvx twine check dist/*
 
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

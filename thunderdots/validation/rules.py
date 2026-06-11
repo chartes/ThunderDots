@@ -1,3 +1,10 @@
+#-*- coding: utf-8 -*-
+
+"""rules.py
+
+Validation rules for collections, resources, and resource results.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -9,6 +16,7 @@ JsonType = Literal["str", "int", "float", "bool", "dict", "list", "null"]
 
 @dataclass(frozen=True, slots=True)
 class FieldRule:
+    """Represents a validation rule for a specific field in the JSON structure, including its path, whether it is required, the allowed types and values, and an optional description."""
     path: str
     required: bool = False
     types: tuple[JsonType, ...] = ()

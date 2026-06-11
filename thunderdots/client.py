@@ -28,11 +28,19 @@ from .orm import DotsNotice
 from .__version__ import __version__
 
 
-def _run_coro_in_thread(coro_factory):
+def _run_coro_in_thread(coro_factory: callable[[], Any]) -> Any:
+    """Run an async coroutine in a separate thread and return its result, allowing async code to run in sync contexts (e.g. notebooks).
+
+    :param coro_factory: A callable that returns the coroutine to run (e.g. a lambda that calls an async method).
+    :type coro_factory: callable[[], Any]
+    :return: The result of the coroutine once it has completed.
+    :rtype: Any
+    """
     result: dict[str, Any] = {}
     error: dict[str, BaseException] = {}
 
     def runner() -> None:
+        """Run the coroutine and store the result or any exception that occurs."""
         try:
             result["value"] = asyncio.run(coro_factory())
         except BaseException as exc:
@@ -49,6 +57,16 @@ def _run_coro_in_thread(coro_factory):
 
 
 def _flatten_for_csv(data: dict[str, Any], prefix: str = "") -> dict[str, str]:
+    """Flatten a nested dictionary into a flat dictionary with dot-separated keys, suitable for CSV output. Lists are JSON-encoded, and None values become empty strings.
+
+    :param data: The input dictionary to flatten, which may contain nested dictionaries and lists.
+    :type data: dict[str, Any]
+    :param prefix: The prefix to prepend to keys (used for recursion, default is empty
+    string).
+    :type prefix: str, optional
+    :return: A flat dictionary with dot-separated keys and string values, suitable for CSV output
+    :rtype: dict[str, str]
+    """
     out: dict[str, str] = {}
 
     for key, value in data.items():
@@ -67,6 +85,7 @@ def _flatten_for_csv(data: dict[str, Any], prefix: str = "") -> dict[str, str]:
 
 
 class ThunderDots:
+    """Client class for fetching and processing data from a DTS endpoint, with support for configuration, caching, and result output."""
     def __init__(
         self,
         endpoint_dts: str,
@@ -104,19 +123,6 @@ class ThunderDots:
         :type concurrency: int
         :param timeout: Request timeout in seconds for Python fetcher (default: 30.
         :type timeout: float
-        :param fetcher: Fetcher backend to use, either "python" or "go" (default: "python").
-        :type fetcher: str
-        :param go_lib_path: Path to the Go fetcher shared library, required if fetch
-                            is set to "go" (default: "native/build/libthunderdots.dylib").
-        :type go_lib_path: str | None
-        :param request_timeout: Request timeout in seconds for Go fetcher (default: 20
-        :type request_timeout: float
-        :param total_timeout: Total timeout in seconds for Go fetcher, 0 means no
-                                limit (default: 0).
-        :type total_timeout: float
-        :param max_inflight: Max concurrent requests for Go fetcher (default: 100
-                            if fetcher is "go", otherwise defaults to max(10, concurrency * 2)).
-        :type max_inflight: int | None
         :param retries: Number of retries for failed requests (default: 2).
         :type retries: int
         :param backoff_ms: Base backoff in milliseconds for retries (default: 200
@@ -398,6 +404,7 @@ class ThunderDots:
                 ui.finalize(self._stats.to_dict())
 
     def notices(self) -> list[DotsNotice]:
+        """Convert the resource results into a list of DotsNotice objects, which are ORM representations of the notices that can be used for further processing or output formatting."""
         return [
             DotsNotice.from_resource_result(item)
             for item in self.results().get("resource_results", [])
@@ -406,6 +413,17 @@ class ThunderDots:
     def to_elastic_documents(
         self, *, include_fragments: bool = True, include_raw: bool = False
     ) -> list[dict[str, Any]]:
+        """Convert the resource results into a list of dictionaries formatted as ElasticSearch documents, with options to include fragments and raw metadata. Each notice is transformed into a format suitable for indexing in ElasticSearch, with fields such as "id", "title, "linked_parents", "metadata", and optionally "fragments" and "raw_metadata" based on the parameters provided.
+
+        :param include_fragments: Whether to include the "fragments" field in the output documents (default: True).
+        :type include_fragments: bool
+        :param include_raw: Whether to include the "raw_metadata" field in the output documents
+                            (default: False).
+        :type include_raw: bool
+        :return: A list of dictionaries, each representing an ElasticSearch document for a notice,
+        with fields formatted according to the DotsNotice.to_elastic_document method and the specified parameters.
+        :rtype: list[dict[str, Any]]
+        """
         return [
             notice.to_elastic_document(
                 include_fragments=include_fragments,
@@ -421,6 +439,20 @@ class ThunderDots:
         include_fragments: bool = True,
         include_raw: bool = False,
     ) -> list[dict[str, Any]]:
+        """Convert the resource results into a list of dictionaries formatted as ElasticSearch bulk API actions, with options to include fragments and raw metadata. Each notice is transformed into a format suitable for bulk indexing in ElasticSearch, with an action dictionary containing the index name and document ID, followed by the document itself formatted according to the DotsNotice.to_elastic_action method and the specified parameters.
+
+        :param index: The name of the ElasticSearch index to use in the bulk actions.
+        :type index: str
+        :param include_fragments: Whether to include the "fragments" field in the output
+                            documents (default: True).
+        :type include_fragments: bool
+        :param include_raw: Whether to include the "raw_metadata" field in the output documents
+                            (default: False).
+        :type include_raw: bool
+        :return: A list of dictionaries, each representing an ElasticSearch bulk API action for a
+notice, with the appropriate index and document ID, and the document formatted according to the DotsNotice.to_elastic_action method and the specified parameters.
+        :rtype: list[dict[str, Any]]
+        """
         return [
             notice.to_elastic_action(
                 index=index,
@@ -433,6 +465,17 @@ class ThunderDots:
     def to_qdrant_payloads(
         self, *, include_fragments: bool = True, include_raw: bool = False
     ) -> list[dict[str, Any]]:
+        """Convert the resource results into a list of dictionaries formatted as Qdrant payloads, with options to include fragments and raw metadata. Each notice is transformed into a format suitable for indexing in Qdrant, with fields such as "id", "title, "linked_parents", "metadata", and optionally "fragments" and "raw_metadata" based on the parameters provided.
+
+        :param include_fragments: Whether to include the "fragments" field in the output payloads (default: True).
+        :type include_fragments: bool
+        :param include_raw: Whether to include the "raw_metadata" field in the output payload
+                            (default: False).
+        :type include_raw: bool
+        :return: A list of dictionaries, each representing a Qdrant payload for a notice
+        with fields formatted according to the DotsNotice.to_qdrant_payload method and the specified parameters.
+        :rtype: list[dict[str, Any]]
+        """
         return [
             notice.to_qdrant_payload(
                 include_fragments=include_fragments,
@@ -448,6 +491,20 @@ class ThunderDots:
         include_fragments: bool = True,
         include_raw: bool = False,
     ) -> list[dict[str, Any]]:
+        """Convert the resource results into a list of dictionaries formatted as Qdrant points, with options to include fragments, raw metadata, and associated vectors. Each notice is transformed into a format suitable for indexing in Qdrant, with fields such as "id", "title, "linked_parents", "metadata", and optionally "fragments" and raw_metadata" based on the parameters provided. If vectors are provided, they are included in the point data for each notice.
+
+        :param vectors: An optional list of vectors to include in the point data for each notice. If provided, the length of this list must match the number of notices, and each vector will be included in the corresponding notice's point data (default: None).
+        :type vectors: list[list[float] | dict[str, Any]] | None
+        :param include_fragments: Whether to include the "fragments" field in the output
+                            points (default: True).
+        :type include_fragments: bool
+        :param include_raw: Whether to include the "raw_metadata" field in the output points
+                            (default: False).
+        :type include_raw: bool
+        :return: A list of dictionaries, each representing a Qdrant point for a notice
+        with fields formatted according to the DotsNotice.to_qdrant_point method and the specified parameters, including vectors if provided.
+        :rtype: list[dict[str, Any]]
+        """
         notices = self.notices()
 
         if vectors is not None and len(vectors) != len(notices):

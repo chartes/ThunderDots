@@ -18,7 +18,23 @@ def build_output(
     collection_metadata_dublincore: list[str] | None = None,
     collection_metadata_extensions: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Build the final output dict with filtered metadata and results."""
+    """Build the final output dict with filtered metadata and results.
+
+    :param collections: List of tuples (collection_data, parent_ids) to include in the output
+    :type collections: list[tuple[dict, list[str]]]
+    :param resources: List of processed resources with extracted fragments to include in the output
+    :type resources: list[dict[str, Any]]
+    :param stats: Stats object to include in the output metadata
+    :type stats: Any
+    :param version: ThunderDots version string to include in the output metadata
+    :type version: str
+    :param collection_metadata_dublincore: Optional list of dublincore metadata fields to include in the output (default: None for all)
+    :type collection_metadata_dublincore: list[str] | None, optional
+    :param collection_metadata_extensions: Optional list of extension metadata fields to include in the output (default: None for all)
+    :type collection_metadata_extensions: list[str] | None, optional
+    :return: Final output dictionary with filtered metadata and results
+    :rtype: dict[str, Any]
+    """
     filtered_collections = []
     for data, parents in collections:
         metadata = build_metadata(

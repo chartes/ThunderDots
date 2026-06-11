@@ -13,6 +13,19 @@ import asyncio
 
 
 async def _fetch_collection(fetcher, cid, stats, ui=None):
+    """Fetch a collection by ID, with error handling and stats tracking.
+
+    :param fetcher: Fetcher instance to use for HTTP requests
+    :type fetcher: Fetcher
+    :param cid: Collection ID to fetch (None for root collection)
+    :type cid: Optional[str]
+    :param stats: Stats object to track HTTP errors
+    :type stats: Any
+    :param ui: Optional UI object for debug messages
+    :type ui: Any, optional
+    :return: Collection data as a dict, or None if an error occurred
+    :rtype: Optional[dict]
+    """
     params = {"id": cid} if cid else {}
     try:
         data = await fetcher.get_json("/collection", params=params)
@@ -27,18 +40,31 @@ async def _fetch_collection(fetcher, cid, stats, ui=None):
 
 
 async def walk_collections(fetcher, config, stats, ui=None) -> Tuple[List[dict], List[dict]]:
+    """Walk a collection and its sub-collections, fetching their data and the data of their resources.
+
+    :param fetcher: Fetcher instance to use for HTTP requests
+    :type fetcher: Fetcher
+    :param config: ThunderDotsConfig instance with configuration parameters
+    :type config: ThunderDotsConfig
+    :param stats: Stats object to track HTTP errors
+    :type stats: Any
+    :param ui: Optional UI object for progress updates
+    :type ui: Any, optional
+    :return: Tuple of (collections, resources) where each is a list of dicts
+    :rtype: Tuple[List[dict], List[dict]]
+    """
     concurrency = max(1, int(config.concurrency))
 
     collections: list[tuple[dict, list[str]]] = []
     resources: list[tuple[dict, list[str]]] = []
 
-    # Queue d'items à traiter : (cid, parents)
+    # items queue : (collection_id, parent_ids)
     q: asyncio.Queue[Optional[tuple[str, list[str]]]] = asyncio.Queue()
     await q.put((config.collection_params.collection_id or "", []))
 
     excluded = set(config.collection_params.excluded_ids or [])
 
-    # seen protège des cycles/doublons
+    # seen collection/resource IDs to avoid cycles and duplicates
     seen: set[str] = set()
     seen_lock = asyncio.Lock()
 
@@ -49,6 +75,7 @@ async def walk_collections(fetcher, config, stats, ui=None) -> Tuple[List[dict],
     SENTINEL: Optional[tuple[str, list[str]]] = None
 
     async def worker() -> None:
+        """Worker coroutine to process items from the queue."""
         nonlocal walked
         while True:
             item = await q.get()
@@ -59,7 +86,7 @@ async def walk_collections(fetcher, config, stats, ui=None) -> Tuple[List[dict],
                 cid, parents = item
                 data = await _fetch_collection(fetcher, cid, stats, ui=ui)
                 if data is None:
-                    continue  # important: ne pas tuer le worker
+                    continue  # important: skip counting as walked if fetch failed
 
                 async with walked_lock:
                     walked += 1
@@ -98,10 +125,10 @@ async def walk_collections(fetcher, config, stats, ui=None) -> Tuple[List[dict],
 
     workers = [asyncio.create_task(worker()) for _ in range(concurrency)]
 
-    # Attend que tout ce qui a été enqueued soit traité (y compris ce qui est ajouté en cours de route)
+    # Wait until all items have been processed (queue is empty and all tasks are done)
     await q.join()
 
-    # Stop proprement les workers (sinon ils restent bloqués sur q.get())
+    # Stop workers by sending sentinel values
     for _ in range(concurrency):
         await q.put(SENTINEL)
     await asyncio.gather(*workers)

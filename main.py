@@ -1,18 +1,24 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-"""Sandbox ThunderDots.
+"""ThunderDots sandbox script.
 
-Compare les modes de récupération de fragments DTS :
-- navigation
-- document
+This script compares two DTS fragment retrieval modes:
 
-Produit :
-- JSON complet par mode ;
-- résumé console ;
-- TXT lisible par mode ;
-- diagnostic des erreurs HTTP ;
-- aperçu des ressources/fragments récupérés.
+- ``document``: retrieves each resource as a single full-document fragment.
+- ``navigation``: retrieves DTS navigation data and extracts one fragment per
+  navigational unit when possible.
+
+The script writes, for each mode:
+
+- a complete JSON output produced by ThunderDots;
+- a readable TXT summary;
+- a console summary;
+- basic HTTP diagnostics;
+- a short preview of retrieved resources and fragments.
+
+It is intended as a development and diagnostic script, not as part of the
+library public API.
 """
 
 from __future__ import annotations
@@ -31,28 +37,60 @@ COLLECTION_ID = "ENCPOS_1972"
 
 OUT_DIR = Path("out_results")
 
-
-HTTP_PARAMS = dict(
-    concurrency=8,
-    request_timeout=15.0,
-    retries=2,
-    backoff_ms=300,
-)
+HTTP_PARAMS = {
+    "concurrency": 8,
+    "request_timeout": 15.0,
+    "retries": 2,
+    "backoff_ms": 300,
+}
 
 
 def now_stamp() -> str:
+    """Return a filesystem-friendly timestamp for output file names.
+
+    Returns
+    -------
+    str
+        Current local timestamp formatted as ``YYYYMMDD_HHMMSS``.
+    """
     return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
 def compact_text(text: str | None, max_chars: int = 500) -> str:
-    text = " ".join((text or "").split())
-    if len(text) <= max_chars:
-        return text
-    return text[:max_chars].rstrip() + "…"
+    """Normalize whitespace and truncate text to a maximum number of characters.
+
+    Parameters
+    ----------
+    text : str | None
+        Input text to normalize and truncate. ``None`` is treated as an empty
+        string.
+    max_chars : int, default=500
+        Maximum number of characters to keep.
+
+    Returns
+    -------
+    str
+        Compact text preview. If the text is longer than ``max_chars``, it is
+        truncated and suffixed with an ellipsis.
+    """
+    compacted = " ".join((text or "").split())
+
+    if len(compacted) <= max_chars:
+        return compacted
+
+    return compacted[:max_chars].rstrip() + "…"
 
 
 def print_separator(title: str | None = None) -> None:
+    """Print a visual separator, optionally followed by a section title.
+
+    Parameters
+    ----------
+    title : str | None, optional
+        Optional title displayed between separator lines.
+    """
     print("\n" + "=" * 100)
+
     if title:
         print(title)
         print("=" * 100)
@@ -64,6 +102,23 @@ def build_client(
     output_json: Path,
     verbose: bool = True,
 ) -> ThunderDots:
+    """Build a configured ThunderDots client for one fragment extraction mode.
+
+    Parameters
+    ----------
+    fragment_mode : str
+        Fragment extraction mode passed to ThunderDots. Expected values include
+        ``"document"`` and ``"navigation"``.
+    output_json : pathlib.Path
+        Path where the full JSON output should be written.
+    verbose : bool, default=True
+        Whether to display ThunderDots progress output.
+
+    Returns
+    -------
+    ThunderDots
+        Configured ThunderDots client.
+    """
     return ThunderDots(
         endpoint_dts=ENDPOINT_DTS,
         collection_params={
@@ -85,12 +140,33 @@ def build_client(
 
 
 def summarize_results(results: dict[str, Any], stats: dict[str, Any]) -> dict[str, Any]:
+    """Compute aggregate counts and diagnostics from ThunderDots results.
+
+    Parameters
+    ----------
+    results : dict[str, Any]
+        Result dictionary returned by ``ThunderDots.results()``.
+    stats : dict[str, Any]
+        Runtime statistics returned by ``ThunderDots.stats()``.
+
+    Returns
+    -------
+    dict[str, Any]
+        Summary containing collection count, collection member count, resource
+        count, fragment count, output metadata, and runtime statistics.
+    """
     collection_results = results.get("collection_results", [])
     resource_results = results.get("resource_results", [])
 
-    members_count = sum(len(collection.get("member") or []) for collection in collection_results)
+    members_count = sum(
+        len(collection.get("member") or [])
+        for collection in collection_results
+    )
 
-    fragments_count = sum(len(resource.get("fragments") or []) for resource in resource_results)
+    fragments_count = sum(
+        len(resource.get("fragments") or [])
+        for resource in resource_results
+    )
 
     return {
         "collections": len(collection_results),
@@ -103,56 +179,75 @@ def summarize_results(results: dict[str, Any], stats: dict[str, Any]) -> dict[st
 
 
 def print_summary(mode: str, results: dict[str, Any], stats: dict[str, Any]) -> None:
+    """Print a console summary for one fragment retrieval mode.
+
+    Parameters
+    ----------
+    mode : str
+        Fragment retrieval mode used for the run.
+    results : dict[str, Any]
+        Result dictionary returned by ``ThunderDots.results()``.
+    stats : dict[str, Any]
+        Runtime statistics returned by ``ThunderDots.stats()``.
+    """
     summary = summarize_results(results, stats)
 
-    print_separator(f"Résumé — fragment_mode={mode!r}")
-    print(f"Collections         : {summary['collections']}")
-    print(f"Membres collection  : {summary['collection_members']}")
-    print(f"Ressources récupérées: {summary['resources']}")
-    print(f"Fragments récupérés : {summary['fragments']}")
+    print_separator(f"Summary — fragment_mode={mode!r}")
+    print(f"Collections        : {summary['collections']}")
+    print(f"Collection members : {summary['collection_members']}")
+    print(f"Retrieved resources: {summary['resources']}")
+    print(f"Retrieved fragments: {summary['fragments']}")
 
-    print("\nMeta :")
+    print("\nMeta:")
     pprint(summary["meta"], sort_dicts=False)
 
-    print("\nStats :")
+    print("\nStats:")
     pprint(summary["stats"], sort_dicts=False)
 
     if summary["collection_members"] and not summary["resources"]:
-        print("\n⚠️  Diagnostic probable :")
+        print("\n⚠️  Likely diagnostic:")
         print(
-            "La collection est bien récupérée, mais aucune ressource ne l’est. "
-            "Le mode utilisé pour récupérer les documents échoue probablement "
-            "sur chaque membre de la collection."
+            "The collection was retrieved successfully, but no resource was fetched. "
+            "The document retrieval mode probably failed for every collection member."
         )
 
 
 def print_first_items(results: dict[str, Any], *, limit: int = 3) -> None:
+    """Print a short preview of the first retrieved resources and fragments.
+
+    Parameters
+    ----------
+    results : dict[str, Any]
+        Result dictionary returned by ``ThunderDots.results()``.
+    limit : int, default=3
+        Maximum number of resources to preview.
+    """
     resources = results.get("resource_results", [])
 
-    print_separator(f"Aperçu des {limit} premières ressources")
+    print_separator(f"Preview of the first {limit} resources")
 
     if not resources:
-        print("Aucune ressource récupérée.")
+        print("No resource retrieved.")
         return
 
-    for i, resource in enumerate(resources[:limit], start=1):
+    for index, resource in enumerate(resources[:limit], start=1):
         fragments = resource.get("fragments") or []
         metadata = resource.get("metadata") or {}
 
-        print(f"\n[{i}] {resource.get('id')}")
-        print(f"    Titre     : {resource.get('title')}")
-        print(f"    Fragments : {len(fragments)}")
-        print("    Metadata  :")
+        print(f"\n[{index}] {resource.get('id')}")
+        print(f"    Title    : {resource.get('title')}")
+        print(f"    Fragments: {len(fragments)}")
+        print("    Metadata :")
         pprint(metadata, sort_dicts=False, width=120)
 
         if fragments:
             first_fragment = fragments[0]
-            print("    Premier fragment :")
-            print(f"      dots_id    : {first_fragment.get('dots_id')}")
-            print(f"      level      : {first_fragment.get('level')}")
-            print(f"      head       : {first_fragment.get('head')}")
-            print(f"      breadcrumb : {first_fragment.get('breadcrumb')}")
-            print(f"      content    : {compact_text(first_fragment.get('content'), 400)}")
+            print("    First fragment:")
+            print(f"      dots_id   : {first_fragment.get('dots_id')}")
+            print(f"      level     : {first_fragment.get('level')}")
+            print(f"      head      : {first_fragment.get('head')}")
+            print(f"      breadcrumb: {first_fragment.get('breadcrumb')}")
+            print(f"      content   : {compact_text(first_fragment.get('content'), 400)}")
 
 
 def write_summary_txt(
@@ -162,17 +257,30 @@ def write_summary_txt(
     stats: dict[str, Any],
     out_path: Path,
 ) -> None:
+    """Write a readable TXT summary for one ThunderDots run.
+
+    Parameters
+    ----------
+    mode : str
+        Fragment retrieval mode used for the run.
+    results : dict[str, Any]
+        Result dictionary returned by ``ThunderDots.results()``.
+    stats : dict[str, Any]
+        Runtime statistics returned by ``ThunderDots.stats()``.
+    out_path : pathlib.Path
+        Destination path for the TXT summary.
+    """
     summary = summarize_results(results, stats)
     resources = results.get("resource_results", [])
 
     lines: list[str] = []
 
-    lines.append(f"ThunderDots — synthèse — fragment_mode={mode!r}")
+    lines.append(f"ThunderDots summary — fragment_mode={mode!r}")
     lines.append("=" * 100)
-    lines.append(f"Collections          : {summary['collections']}")
-    lines.append(f"Membres collection   : {summary['collection_members']}")
-    lines.append(f"Ressources récupérées: {summary['resources']}")
-    lines.append(f"Fragments récupérés  : {summary['fragments']}")
+    lines.append(f"Collections        : {summary['collections']}")
+    lines.append(f"Collection members : {summary['collection_members']}")
+    lines.append(f"Retrieved resources: {summary['resources']}")
+    lines.append(f"Retrieved fragments: {summary['fragments']}")
     lines.append("")
     lines.append("Meta")
     lines.append("-" * 100)
@@ -184,23 +292,23 @@ def write_summary_txt(
     lines.append("")
 
     if not resources:
-        lines.append("Aucune ressource récupérée.")
+        lines.append("No resource retrieved.")
         lines.append("")
-        lines.append("Diagnostic probable")
+        lines.append("Likely diagnostic")
         lines.append("-" * 100)
         lines.append(
-            "La collection a été récupérée, mais les ressources ont échoué. "
-            "Cela suggère que le mode de récupération des documents n’est pas "
-            "compatible avec cet endpoint ou avec ces ressources."
+            "The collection was retrieved successfully, but resource fetching failed. "
+            "This suggests that the selected document retrieval mode is not compatible "
+            "with this endpoint or with these resources."
         )
 
     for resource in resources:
         fragments = resource.get("fragments") or []
 
         lines.append("=" * 100)
-        lines.append(f"ID        : {resource.get('id')}")
-        lines.append(f"Titre     : {resource.get('title')}")
-        lines.append(f"Fragments : {len(fragments)}")
+        lines.append(f"ID       : {resource.get('id')}")
+        lines.append(f"Title    : {resource.get('title')}")
+        lines.append(f"Fragments: {len(fragments)}")
 
         metadata = resource.get("metadata") or {}
         if metadata:
@@ -210,10 +318,10 @@ def write_summary_txt(
         for index, fragment in enumerate(fragments, start=1):
             lines.append("-" * 100)
             lines.append(f"Fragment {index}")
-            lines.append(f"dots_id    : {fragment.get('dots_id')}")
-            lines.append(f"level      : {fragment.get('level')}")
-            lines.append(f"head       : {fragment.get('head')}")
-            lines.append(f"breadcrumb : {fragment.get('breadcrumb')}")
+            lines.append(f"dots_id   : {fragment.get('dots_id')}")
+            lines.append(f"level     : {fragment.get('level')}")
+            lines.append(f"head      : {fragment.get('head')}")
+            lines.append(f"breadcrumb: {fragment.get('breadcrumb')}")
             lines.append("")
             lines.append(compact_text(fragment.get("content"), 1200))
             lines.append("")
@@ -222,6 +330,26 @@ def write_summary_txt(
 
 
 def run_mode(fragment_mode: str, stamp: str) -> dict[str, Any]:
+    """Run ThunderDots for one fragment extraction mode.
+
+    Parameters
+    ----------
+    fragment_mode : str
+        Fragment extraction mode to test.
+    stamp : str
+        Timestamp used to generate output file names.
+
+    Returns
+    -------
+    dict[str, Any]
+        Run record containing the mode, results, stats, and output paths.
+
+    Raises
+    ------
+    Exception
+        Re-raises any exception produced by ``ThunderDots.fetch()`` after
+        printing a short diagnostic message.
+    """
     output_json = OUT_DIR / f"thunderdots_{fragment_mode}_{stamp}.json"
     output_txt = OUT_DIR / f"thunderdots_{fragment_mode}_{stamp}.txt"
 
@@ -231,12 +359,12 @@ def run_mode(fragment_mode: str, stamp: str) -> dict[str, Any]:
         verbose=True,
     )
 
-    print_separator(f"Lancement ThunderDots — fragment_mode={fragment_mode!r}")
+    print_separator(f"Running ThunderDots — fragment_mode={fragment_mode!r}")
 
     try:
         td.fetch()
     except Exception as exc:
-        print(f"❌ Erreur pendant td.fetch() pour mode={fragment_mode!r}")
+        print(f"❌ Error during td.fetch() for mode={fragment_mode!r}")
         print(type(exc).__name__, exc)
         raise
 
@@ -253,9 +381,9 @@ def run_mode(fragment_mode: str, stamp: str) -> dict[str, Any]:
         out_path=output_txt,
     )
 
-    print_separator(f"Fichiers écrits — fragment_mode={fragment_mode!r}")
-    print(f"JSON : {output_json}")
-    print(f"TXT  : {output_txt}")
+    print_separator(f"Files written — fragment_mode={fragment_mode!r}")
+    print(f"JSON: {output_json}")
+    print(f"TXT : {output_txt}")
 
     return {
         "mode": fragment_mode,
@@ -267,9 +395,16 @@ def run_mode(fragment_mode: str, stamp: str) -> dict[str, Any]:
 
 
 def compare_modes(runs: list[dict[str, Any]]) -> None:
-    print_separator("Comparaison des modes")
+    """Print a compact comparison table for all completed runs.
 
-    rows = []
+    Parameters
+    ----------
+    runs : list[dict[str, Any]]
+        List of run records returned by ``run_mode``.
+    """
+    print_separator("Mode comparison")
+
+    rows: list[dict[str, Any]] = []
 
     for run in runs:
         mode = run["mode"]
@@ -308,10 +443,15 @@ def compare_modes(runs: list[dict[str, Any]]) -> None:
 
 
 def sandbox() -> None:
+    """Run the full sandbox comparison workflow.
+
+    The workflow creates the output directory, generates a shared timestamp,
+    runs ThunderDots in both ``document`` and ``navigation`` modes, and prints
+    a final comparison table.
+    """
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     stamp = now_stamp()
-
     runs = []
 
     for mode in ["document", "navigation"]:

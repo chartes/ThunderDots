@@ -1,3 +1,10 @@
+#-*- coding: utf-8 -*-
+
+"""schemas.py
+
+JSON Schemas for validating collections, resources, and output structure.
+"""
+
 from __future__ import annotations
 
 COLLECTION_SCHEMA = {

@@ -27,7 +27,21 @@ async def fetch_resources(
     stats,
     ui: Any = None,
 ) -> list[dict[str, Any]]:
-    """Fetch and extract text from resources, with concurrency and progress tracking."""
+    """Fetch and extract text from resources, with concurrency and progress tracking.
+
+    :param fetcher: Fetcher instance to use for HTTP requests
+    :type fetcher: Fetcher
+    :param config: ThunderDotsConfig instance with configuration parameters
+    :type config: ThunderDotsConfig
+    :param resources: List of tuples (resource_data, parent_ids) to process
+    :type resources: list[tuple[dict[str, Any], list[str]]]
+    :param stats: Stats object to track HTTP errors
+    :type stats: Any
+    :param ui: Optional UI object for progress updates
+    :type ui: Any, optional
+    :return: List of processed resources with extracted fragments
+    :rtype: list[dict[str, Any]]
+    """
 
     workers_n = max(1, int(config.concurrency))
     total = len(resources)
@@ -89,8 +103,9 @@ async def fetch_resources(
                         max_depth = 0
 
                     # ------------------------------------------------------------
-                    # 1. Mode navigation :
-                    #    on utilise /navigation + /document
+                    # 1. Navigation mode :
+                    #    We use the /navigation endpoint to get the structure of the resource and its fragments
+                    #    And then we extract the text of each fragment with /document
                     # ------------------------------------------------------------
                     if fragment_mode == "navigation" or (
                         fragment_mode == "auto" and fetch_navigation and max_depth > 0
@@ -116,9 +131,9 @@ async def fetch_resources(
                         )
 
                     # ------------------------------------------------------------
-                    # 2. Mode TEI XPath :
-                    #    on ignore /navigation et on découpe le XML TEI
-                    #    avec fragment_xpath
+                    # 2. TEI XPath mode :
+                    #    We ingore the /navigation endpoint
+                    #    and we split the TEI XML with fragment_xpath
                     # ------------------------------------------------------------
                     elif fragment_mode == "tei_xpath":
                         if not fragment_xpath:
@@ -146,8 +161,9 @@ async def fetch_resources(
                         )
 
                     # ------------------------------------------------------------
-                    # 3. Mode document :
-                    #    un seul fragment global pour toute la ressource
+                    # 3. Document mode :
+                    #    One unique fragment containing the whole text of the resource,
+                    #    extracted from /document endpoint
                     # ------------------------------------------------------------
                     elif fragment_mode == "document" or fragment_mode == "auto":
                         doc = await fetcher.get_text(
@@ -186,10 +202,8 @@ async def fetch_resources(
 
             finally:
                 done += 1
-
                 if ui:
                     now = asyncio.get_running_loop().time()
-
                     if (now - last_ui) >= ui_period or done == total:
                         last_ui = now
                         ui.update_resources(
@@ -197,7 +211,6 @@ async def fetch_resources(
                             total=total,
                             http_errors=stats.http_errors,
                         )
-
                 queue.task_done()
 
     workers = [asyncio.create_task(worker()) for _ in range(workers_n)]

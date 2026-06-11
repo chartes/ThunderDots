@@ -1,3 +1,10 @@
+#-*- coding: utf-8 -*-
+
+"""orm.py
+
+ORM for DotsNotice, with methods to convert to ElasticSearch and Qdrant payloads.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -19,11 +26,29 @@ DUBLINCORE_DATE_FIELDS = {
 
 
 def stable_int_id(value: str) -> int:
+    """Generate a stable integer ID from a string value using SHA-1 hashing. The resulting integer is derived from the first 16 hexadecimal characters of the hash, ensuring a consistent mapping for the same input string.
+
+    :param value: The input string value to generate the integer ID from
+    :type value: str
+    :return: A stable integer ID derived from the input string
+    :rtype: int
+    """
     digest = hashlib.sha1(value.encode("utf-8")).hexdigest()[:16]
     return int(digest, 16)
 
 
 def flatten_dict(data: dict[str, Any], prefix: str = "") -> dict[str, Any]:
+    """Flatten a nested dictionary into a single-level dictionary with dotted keys.
+
+    This function recursively flattens a nested dictionary, concatenating keys with dots. For example, {"a": {"b": 1}} becomes {"a.b": 1}. The prefix parameter allows adding a prefix to the keys during recursion.
+
+    :param data: The nested dictionary to flatten
+    :type data: dict[str, Any]
+    :param prefix: The prefix to add to keys during flattening (used for recursion)
+    :type prefix: str, optional
+    :return: A flattened dictionary with dotted keys
+    :rtype: dict[str, Any]
+    """
     flat: dict[str, Any] = {}
 
     for key, value in data.items():
@@ -38,11 +63,21 @@ def flatten_dict(data: dict[str, Any], prefix: str = "") -> dict[str, Any]:
 
 
 def sanitize_payload_key(key: str) -> str:
+    """Sanitize a string to be used as a key in a payload by replacing or removing characters that may not be allowed in certain contexts (e.g., Elasticsearch, Qdrant).
+
+    This function replaces dots (.) and colons (:) with double underscores (__), replaces dashes (-) with underscores (_), and removes at signs (@). This ensures that the resulting key is safe to use in contexts where certain characters may have special meanings or restrictions.
+
+    :param key: The input string key to sanitize
+    :type key: str
+    :return: A sanitized version of the input key, with certain characters replaced or removed
+    :rtype: str
+    """
     return key.replace(".", "__").replace(":", "__").replace("-", "_").replace("@", "")
 
 
 @dataclass(slots=True)
 class Agent:
+    """Represents an agent (e.g., creator) associated with a DotsNotice, with optional fields for ID, type, name, and sameAs links."""
     id: str | None = None
     type: str | None = None
     name: str | None = None
@@ -52,6 +87,7 @@ class Agent:
 
 @dataclass(slots=True)
 class DotsNotice:
+    """Represents a notice in the Dots system, with fields for ID, type, title, Dublin Core metadata, extensions, fragments, linked parents, and raw data. Provides methods to convert to ElasticSearch and Qdrant payloads, as well as accessors for metadata and creator agents."""
     id: str
     type: str
     title: str | None = None
@@ -63,6 +99,15 @@ class DotsNotice:
 
     @classmethod
     def from_resource_result(cls, data: dict[str, Any]) -> "DotsNotice":
+        """Create a DotsNotice instance from a resource result dictionary, extracting relevant fields and metadata.
+
+        The method looks for the ID in either "id" or "@id", the type in "@type" (defaulting to "Resource" if not present), and the title in "title". It also extracts Dublin Core metadata and extensions from the "metadata" field, as well as fragments and linked parents from their respective fields. The raw input data is stored in the "raw" field of the DotsNotice instance.
+
+        :param data: The input dictionary representing a resource result, which may contain fields like "id", "@id", "@type", "title", "metadata", "fragments", and "linked_parents".
+        :type data: dict[str, Any]
+        :return: A DotsNotice instance populated with the extracted data and metadata from the input
+        :rtype: DotsNotice
+        """
         metadata = data.get("metadata") or {}
         return cls(
             id=str(data.get("id") or data.get("@id")),

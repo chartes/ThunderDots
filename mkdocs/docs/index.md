@@ -36,7 +36,7 @@ pip install thunderdots
 from thunderdots import ThunderDots
 
 td = ThunderDots(
-    endpoint_dts="https://dev.chartes.psl.eu/dots/api/dts",
+    endpoint_dts="https://dots.chartes.psl.eu/api/dts",
     collection_params={"collection_id": "ENCPOS_1900"},
     resource_params={"fragment_mode": "document"},
 )
@@ -57,7 +57,8 @@ results = td.results()
   title        = {ThunderDots},
   year         = {2026},
   publisher    = {GitHub},
+  institution  = {{École nationale des chartes}},
   url          = {https://github.com/chartes/thunderdots},
-  note         = {Python client for Distributed Text Services endpoints via DoTS}
+  note         = {Python client for Distributed Text Services (DTS) via DoTS}
 }
 ```
