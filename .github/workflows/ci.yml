@@ -117,7 +117,7 @@ jobs:
         run: uv run mkdocs build --strict -f mkdocs/mkdocs.yml
 
       - name: Upload GitHub Pages artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: actions/upload-pages-artifact@v3
         with:
           path: mkdocs/site
