@@ -31,3 +31,4 @@ thunderdots/native/build/*mkdocs/site/
 site/
 
 *.egg-info/
+__version__.py

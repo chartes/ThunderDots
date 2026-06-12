@@ -101,7 +101,7 @@ Replace v0.1.0 with the target release version.
 
 ```
 git tag v0.1.0 
-git push origin main 
+git push origin master
 git push origin v0.1.0
 ``` 
 
