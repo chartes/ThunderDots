@@ -1,9 +1,10 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 """models.py
 
 Models for validation reports.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -13,6 +14,7 @@ from typing import Any
 @dataclass(slots=True)
 class ValidationIssue:
     """Represents a single validation issue found during the validation process."""
+
     level: str
     code: str
     message: str
@@ -23,16 +25,19 @@ class ValidationIssue:
 
 @dataclass(slots=True)
 class ValidationReport:
-    """Represents the validation report for a single resource, including whether it is valid and any issues found."""
+    """Represent the validation report for one object."""
+
     ok: bool
     issues: list[ValidationIssue] = field(default_factory=list)
-    triple_count: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert the ValidationReport to a dictionary format, including the validation status, triple count, and a list of issues with their details."""
+        """Convert the validation report to a dictionary.
+
+        :return: Dictionary representation of the validation report.
+        :rtype: dict[str, Any]
+        """
         return {
             "ok": self.ok,
-            "triple_count": self.triple_count,
             "issues": [issue.__dict__ for issue in self.issues],
         }
 
@@ -40,6 +45,7 @@ class ValidationReport:
 @dataclass(slots=True)
 class BatchValidationReport:
     """Represents a batch validation report for multiple resources, including a summary of the results and a list of individual validation reports."""
+
     reports: list[ValidationReport]
 
     def summary(self) -> dict[str, Any]:

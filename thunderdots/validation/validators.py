@@ -1,4 +1,4 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 """validators.py
 
@@ -63,11 +63,11 @@ def validate_with_jsonschema(data: dict[str, Any], profile: str) -> ValidationRe
 def infer_profile(data: dict[str, Any]) -> str:
     """Infer the appropriate validation profile for the given data based on its structure and content, which can be used to determine which JSON Schema to use for validation.
 
-    :param data: The input data to infer the profile for, represented as a dictionary.
-    :type data: dict[str, Any]
-    :return: The inferred profile name (e.g., "collection", "resource", "
-resource_result", "output") based on the structure and content of the input data.
-    :rtype: str
+        :param data: The input data to infer the profile for, represented as a dictionary.
+        :type data: dict[str, Any]
+        :return: The inferred profile name (e.g., "collection", "resource", "
+    resource_result", "output") based on the structure and content of the input data.
+        :rtype: str
     """
     if "resource_results" in data and "collection_results" in data:
         return "output"
@@ -102,13 +102,13 @@ def validate_notice(data: dict[str, Any], profile: str | None = None) -> Validat
 def validate_many(items: list[dict[str, Any]], profile: str | None = None) -> BatchValidationReport:
     """Validate multiple notices (collections or resources) against the appropriate JSON Schema profile, either specified explicitly or inferred from each item's data structure, and return a BatchValidationReport containing the validation results for all items.
 
-    :param items: A list of input notice data dictionaries to validate.
-    :type items: list[dict[str, Any]]
-    :param profile: An optional profile name to specify which JSON Schema to use for validation of
-all items (e.g., "collection", "resource", "resource_result"). If not provided, the profile will be inferred from each item's data structure.
-    :type profile: str | None
-    :return: A BatchValidationReport object containing the validation results for all items, including a
-summary of the results and a list of individual ValidationReport objects for each item.
-    :rtype: BatchValidationReport
+        :param items: A list of input notice data dictionaries to validate.
+        :type items: list[dict[str, Any]]
+        :param profile: An optional profile name to specify which JSON Schema to use for validation of
+    all items (e.g., "collection", "resource", "resource_result"). If not provided, the profile will be inferred from each item's data structure.
+        :type profile: str | None
+        :return: A BatchValidationReport object containing the validation results for all items, including a
+    summary of the results and a list of individual ValidationReport objects for each item.
+        :rtype: BatchValidationReport
     """
     return BatchValidationReport(reports=[validate_notice(item, profile=profile) for item in items])

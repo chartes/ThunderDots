@@ -29,3 +29,5 @@ specs
 out_results/
 thunderdots/native/build/*mkdocs/site/
 site/
+
+*.egg-info/

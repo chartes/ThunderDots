@@ -1,4 +1,4 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 """ui.py
 
@@ -44,6 +44,7 @@ class UI:
     - task_walk: Optional task ID for the collection walking progress bar
     - task_res: Optional task ID for the resource fetching progress bar
     """
+
     enabled: bool = True
     progress: Optional[Progress] = None
     task_walk: Optional[int] = None

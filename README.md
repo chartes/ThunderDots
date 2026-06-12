@@ -154,4 +154,4 @@ If you use ThunderDots in academic work, please cite it as:
 }
 ```
 
-You can also use the repository metadata from [CITATION.cff￼](./CITATION.cff).
+You can also use the repository metadata from [CITATION.cff](./CITATION.cff).

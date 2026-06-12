@@ -86,6 +86,7 @@ def _flatten_for_csv(data: dict[str, Any], prefix: str = "") -> dict[str, str]:
 
 class ThunderDots:
     """Client class for fetching and processing data from a DTS endpoint, with support for configuration, caching, and result output."""
+
     def __init__(
         self,
         endpoint_dts: str,
@@ -166,12 +167,47 @@ class ThunderDots:
 
     # ---------------- PUBLIC API ---------------- #
 
-    async def afetch(self) -> None:
+    def _validate_results_if_needed(self) -> None:
+        """Validate current results when validation is enabled.
+
+        This method enriches the current result dictionary with validation
+        reports. It is used both after a fresh fetch and after loading results
+        from cache.
+
+        :return: None.
+        :rtype: None
         """
-        Async version of fetch(), suitable for notebooks and async applications.
+        if not self.config.validate:
+            return
+
+        if not isinstance(self._results, dict):
+            return
+
+        output_report = validate_notice(self._results, profile="output")
+
+        resource_report = validate_many(
+            self._results.get("resource_results", []),
+            profile="resource_result",
+        )
+
+        self._results["validation"] = {
+            "output": output_report.to_dict(),
+            "resources": resource_report.summary(),
+        }
+
+    async def afetch(self) -> None:
+        """Fetch data asynchronously from the DTS endpoint.
+
+        If cache loading is enabled and a cached result exists, the cached
+        output is loaded and optionally validated before returning.
+
+        :return: None.
+        :rtype: None
         """
         if self._load_results_from_cache():
+            self._validate_results_if_needed()
             return
+
         await self._async_fetch()
 
     def fetch(self) -> None:
@@ -184,14 +220,13 @@ class ThunderDots:
         - Optionally saving the results to a JSON file if output_path is configured.
         """
         if self._load_results_from_cache():
+            self._validate_results_if_needed()
             return
 
         try:
             asyncio.get_running_loop()
-
         except RuntimeError:
             asyncio.run(self._async_fetch())
-
             return
 
         _run_coro_in_thread(self._async_fetch)
@@ -380,17 +415,7 @@ class ThunderDots:
                 )
 
                 if self.config.validate:
-                    output_report = validate_notice(self._results, profile="output")
-
-                    resource_report = validate_many(
-                        self._results.get("resource_results", []),
-                        profile="resource_result",
-                    )
-
-                    self._results["validation"] = {
-                        "output": output_report.to_dict(),
-                        "resources": resource_report.summary(),
-                    }
+                    self._validate_results_if_needed()
                 self._write_results_if_needed()
                 self._write_cache_csv_if_needed()
 
@@ -441,17 +466,17 @@ class ThunderDots:
     ) -> list[dict[str, Any]]:
         """Convert the resource results into a list of dictionaries formatted as ElasticSearch bulk API actions, with options to include fragments and raw metadata. Each notice is transformed into a format suitable for bulk indexing in ElasticSearch, with an action dictionary containing the index name and document ID, followed by the document itself formatted according to the DotsNotice.to_elastic_action method and the specified parameters.
 
-        :param index: The name of the ElasticSearch index to use in the bulk actions.
-        :type index: str
-        :param include_fragments: Whether to include the "fragments" field in the output
-                            documents (default: True).
-        :type include_fragments: bool
-        :param include_raw: Whether to include the "raw_metadata" field in the output documents
-                            (default: False).
-        :type include_raw: bool
-        :return: A list of dictionaries, each representing an ElasticSearch bulk API action for a
-notice, with the appropriate index and document ID, and the document formatted according to the DotsNotice.to_elastic_action method and the specified parameters.
-        :rtype: list[dict[str, Any]]
+                :param index: The name of the ElasticSearch index to use in the bulk actions.
+                :type index: str
+                :param include_fragments: Whether to include the "fragments" field in the output
+                                    documents (default: True).
+                :type include_fragments: bool
+                :param include_raw: Whether to include the "raw_metadata" field in the output documents
+                                    (default: False).
+                :type include_raw: bool
+                :return: A list of dictionaries, each representing an ElasticSearch bulk API action for a
+        notice, with the appropriate index and document ID, and the document formatted according to the DotsNotice.to_elastic_action method and the specified parameters.
+                :rtype: list[dict[str, Any]]
         """
         return [
             notice.to_elastic_action(

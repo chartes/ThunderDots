@@ -62,6 +62,7 @@ uv run ruff check
 # 4. Run tests 
 
 uv run pytest  
+
 # 5. Build the documentation 
 
 uv run mkdocs build --strict -f mkdocs/mkdocs.yml  

@@ -1,4 +1,9 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
+
+"""dates.py
+
+Functions for parsing and normalizing temporal metadata fields, especially those containing years or year ranges.
+"""
 
 from __future__ import annotations
 
@@ -23,13 +28,24 @@ TEMPORAL_FIELDS = {
 }
 
 
+TEMPORAL_KEYS = {
+    "date",
+    "created",
+    "issued",
+    "coverage",
+    "temporal",
+    "temporalCoverage",
+    "dateCreated",
+    "datePublished",
+}
+
+
 def _year_start_iso(year: int) -> str:
     """Convert a year to an ISO date string representing the start of that year.
 
-    :param year: The year to convert (e.g., 2020 or -500)
+    :param year: Year to convert.
     :type year: int
-    :return: An ISO date string representing the start of the year (e.g., "
-2020-01-01" or "-500")
+    :return: ISO date string representing the first day of the year.
     :rtype: str
     """
     return f"{year:04d}-01-01" if year >= 0 else str(year)
@@ -38,30 +54,23 @@ def _year_start_iso(year: int) -> str:
 def _year_end_iso(year: int) -> str:
     """Convert a year to an ISO date string representing the end of that year.
 
-    :param year: The year to convert (e.g., 2020 or -500)
+    :param year: Year to convert.
     :type year: int
-    :return: An ISO date string representing the end of the year (e.g., "
-2020-12-31" or "-500")
+    :return: ISO date string representing the last day of the year.
     :rtype: str
     """
     return f"{year:04d}-12-31" if year >= 0 else str(year)
 
 
 def parse_year_bounds(value: Any) -> tuple[int | None, int | None]:
-    """Parse a year or year range from a string or integer value.
+    """Parse a year or year range from a value.
 
-    Supported formats:
-- Integer year (e.g., 2020)
-- String year (e.g., "2020")
-- Year range (e.g., "2020/2021", "2020/", "/
-2021")
-- Approximate years with "~" or "?" (e.g., "2020~",
-"2020?")
+    Supported values include integer years, string years, and simple ranges such
+    as ``1200/1499``.
 
-    :param value: The value to parse, which can be an integer, string, or None
+    :param value: Value to parse.
     :type value: Any
-    :return: A tuple (start_year, end_year) where each is an integer or
-None if not specified or invalid
+    :return: Tuple containing start and end years when available.
     :rtype: tuple[int | None, int | None]
     """
     if value is None:
@@ -95,48 +104,90 @@ None if not specified or invalid
     return start, int(end_raw)
 
 
+def _is_temporal_field(full_key: str, key: str) -> bool:
+    """Return True when a metadata field should be treated as temporal.
+
+    :param full_key: Full dotted metadata path.
+    :type full_key: str
+    :param key: Local metadata key.
+    :type key: str
+    :return: True if the field is temporal, False otherwise.
+    :rtype: bool
+    """
+    return full_key in TEMPORAL_FIELDS or key in TEMPORAL_KEYS
+
+
 def flatten_temporal_metadata(
     data: dict[str, Any],
     *,
     prefix: str = "",
+    include_unparsed_temporal_values: bool = True,
 ) -> dict[str, Any]:
-    """Flatten a nested metadata dictionary, extracting temporal fields and adding start/end year keys.
+    """Extract temporal metadata from a nested metadata dictionary.
 
-    This function recursively flattens a nested dictionary of metadata, concatenating keys with dots. For any keys that match known temporal fields (e.g., "date", "created", "issued", "coverage"), it attempts to parse the value as a year or year range and adds additional keys for the start and end years, as well as their ISO date representations.
+    This function walks through a nested metadata dictionary and returns only
+    temporal fields. For each temporal value that can be parsed as a year or
+    year range, it adds ``_start``, ``_end``, ``_start_iso``, and ``_end_iso``
+    fields.
 
-    :param data: The nested metadata dictionary to flatten
+    Non-temporal metadata fields are ignored.
+
+    :param data: Nested metadata dictionary to inspect.
     :type data: dict[str, Any]
-    :param prefix: The prefix to use for keys in the flattened dictionary (used for recursion
-    :type prefix: str, optional
-    :return: A flattened dictionary with temporal metadata enriched with start/end year keys
+    :param prefix: Dotted path prefix used during recursion.
+    :type prefix: str
+    :param include_unparsed_temporal_values: Whether to keep temporal fields even when their values cannot be parsed as years.
+    :type include_unparsed_temporal_values: bool
+    :return: Dictionary containing only temporal metadata and parsed date bounds.
     :rtype: dict[str, Any]
     """
-    flat: dict[str, Any] = {}
+    temporal: dict[str, Any] = {}
+
     for key, value in data.items():
         full_key = f"{prefix}.{key}" if prefix else key
+
         if isinstance(value, dict):
-            flat.update(flatten_temporal_metadata(value, prefix=full_key))
+            temporal.update(
+                flatten_temporal_metadata(
+                    value,
+                    prefix=full_key,
+                    include_unparsed_temporal_values=include_unparsed_temporal_values,
+                )
+            )
             continue
-        flat[full_key] = value
-        if full_key in TEMPORAL_FIELDS or key in {"date", "created", "issued", "coverage"}:
-            start, end = parse_year_bounds(value)
-            if start is not None:
-                flat[f"{full_key}_start"] = start
-                flat[f"{full_key}_start_iso"] = _year_start_iso(start)
-            if end is not None:
-                flat[f"{full_key}_end"] = end
-                flat[f"{full_key}_end_iso"] = _year_end_iso(end)
-    return flat
+
+        if not _is_temporal_field(full_key, key):
+            continue
+
+        start, end = parse_year_bounds(value)
+
+        if start is None and end is None:
+            if include_unparsed_temporal_values:
+                temporal[full_key] = value
+            continue
+
+        temporal[full_key] = value
+
+        if start is not None:
+            temporal[f"{full_key}_start"] = start
+            temporal[f"{full_key}_start_iso"] = _year_start_iso(start)
+
+        if end is not None:
+            temporal[f"{full_key}_end"] = end
+            temporal[f"{full_key}_end_iso"] = _year_end_iso(end)
+
+    return temporal
 
 
 def enrich_temporal_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
-    """Enrich metadata with temporal fields by flattening and parsing year information.
+    """Return temporal metadata enriched with parsed year bounds.
 
-    This function takes a nested metadata dictionary, flattens it, and enriches it by parsing any temporal fields to extract start and end years, as well as their ISO date representations. It returns a new dictionary with the enriched metadata.
+    Only temporal fields are returned. General descriptive metadata such as
+    creators, publishers, titles, identifiers, and source records are excluded.
 
-    :param metadata: The original nested metadata dictionary to enrich
+    :param metadata: Nested metadata dictionary to enrich.
     :type metadata: dict[str, Any]
-    :return: A new dictionary with enriched temporal metadata
+    :return: Dictionary containing temporal metadata only.
     :rtype: dict[str, Any]
     """
     return flatten_temporal_metadata(metadata)

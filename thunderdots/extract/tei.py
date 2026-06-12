@@ -143,33 +143,33 @@ def extract_fragments_by_xpath(
 ) -> list[dict]:
     """Extract text fragments from TEI XML based on a specified XPath for fragment nodes, with options for handling headings and generating stable IDs.
 
-    :param tei_xml: TEI XML content as a string
-    :type tei_xml: str
-    :param fragment_xpath: XPath expression to identify fragment nodes to extract
-    :type fragment_xpath: str
-    :param resource_id: Optional resource ID to use in generated fragment IDs
-    :type resource_id: str | None
-    :param title_xpath: XPath expression to identify heading elements within fragments (default: "./tei
-:head")
-    :type title_xpath: str
-    :param remove_fragment_heads: Whether to remove local head text from fragment content (default:
-True)
-    :type remove_fragment_heads: bool
-    :param add_head_to_content: Whether to prepend the head text to the content (default
-    : False)
-    :type add_head_to_content: bool
-    :param exclude_heads_contains: List of substrings; if any is contained in the head
-    (case-insensitive), the fragment will be excluded (default: None)
-    :type exclude_heads_contains: list[str] | None
-    :param include_breadcrumb: Whether to include a breadcrumb field in the output with the head
-    (default: True)
-    :type include_breadcrumb: bool
-    :param generated_id_prefix: Prefix to use for generated fragment IDs when xml:id is not
-    present (default: "__DOCUMENT__")
-    :type generated_id_prefix: str
-    :return: List of dictionaries representing extracted fragments, each containing keys like "dots_id",
-                "head", "content", "fragment_xpath", "fragment_index", and optionally "breadcrumb"
-    :rtype: list[dict]
+        :param tei_xml: TEI XML content as a string
+        :type tei_xml: str
+        :param fragment_xpath: XPath expression to identify fragment nodes to extract
+        :type fragment_xpath: str
+        :param resource_id: Optional resource ID to use in generated fragment IDs
+        :type resource_id: str | None
+        :param title_xpath: XPath expression to identify heading elements within fragments (default: "./tei
+    :head")
+        :type title_xpath: str
+        :param remove_fragment_heads: Whether to remove local head text from fragment content (default:
+    True)
+        :type remove_fragment_heads: bool
+        :param add_head_to_content: Whether to prepend the head text to the content (default
+        : False)
+        :type add_head_to_content: bool
+        :param exclude_heads_contains: List of substrings; if any is contained in the head
+        (case-insensitive), the fragment will be excluded (default: None)
+        :type exclude_heads_contains: list[str] | None
+        :param include_breadcrumb: Whether to include a breadcrumb field in the output with the head
+        (default: True)
+        :type include_breadcrumb: bool
+        :param generated_id_prefix: Prefix to use for generated fragment IDs when xml:id is not
+        present (default: "__DOCUMENT__")
+        :type generated_id_prefix: str
+        :return: List of dictionaries representing extracted fragments, each containing keys like "dots_id",
+                    "head", "content", "fragment_xpath", "fragment_index", and optionally "breadcrumb"
+        :rtype: list[dict]
     """
     root = _parse_tei_xml(tei_xml)
     nodes = root.xpath(fragment_xpath, namespaces=NS)
@@ -518,20 +518,20 @@ def extract_document_text_fast(
 ) -> list[dict]:
     """Extract the full document text from TEI XML without using navigation JSON, with options for handling headings and generating a single fragment.
 
-    :param tei_xml: TEI XML content as a string
-    :type tei_xml: str
-    :param add_head_to_content: Whether to include head text in the content (default:
-True)
-    :type add_head_to_content: bool
-    :param exclude_heads_contains: List of substrings; if any is contained in the head
-    (case-insensitive), the head will be excluded from content (default: None)
-    :type exclude_heads_contains: list[str] | None
-    :param include_breadcrumb: Whether to include a breadcrumb field in the output with the head
-    (default: True)
-    :type include_breadcrumb: bool
-    :return: A list containing a single dictionary representing the entire document text, with keys like
-                "dots_id", "content", and optionally "breadcrumb"
-    :rtype: list[dict]
+        :param tei_xml: TEI XML content as a string
+        :type tei_xml: str
+        :param add_head_to_content: Whether to include head text in the content (default:
+    True)
+        :type add_head_to_content: bool
+        :param exclude_heads_contains: List of substrings; if any is contained in the head
+        (case-insensitive), the head will be excluded from content (default: None)
+        :type exclude_heads_contains: list[str] | None
+        :param include_breadcrumb: Whether to include a breadcrumb field in the output with the head
+        (default: True)
+        :type include_breadcrumb: bool
+        :return: A list containing a single dictionary representing the entire document text, with keys like
+                    "dots_id", "content", and optionally "breadcrumb"
+        :rtype: list[dict]
     """
     root = _parse_tei_xml(tei_xml)
     text_el = root.find(".//tei:text", namespaces=NS)

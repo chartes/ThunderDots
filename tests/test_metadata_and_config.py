@@ -65,6 +65,47 @@ def test_collection_params_default_to_none_metadata_filters() -> None:
     assert params.metadata_extensions is None
 
 
+def test_enrich_temporal_metadata_keeps_only_temporal_fields() -> None:
+    """Verify that temporal enrichment excludes non-temporal descriptive metadata."""
+    enriched = enrich_temporal_metadata(
+        {
+            "dublincore": {
+                "title": "A title",
+                "creator": "Marie-Claude Bartoli",
+                "coverage": "1200/1499",
+            },
+            "extensions": {
+                "publisher": {
+                    "name": "École des chartes",
+                },
+                "creator": {
+                    "name": "Marie-Claude Bartoli",
+                },
+                "dateCreated": "1972",
+                "temporalCoverage": "1200/1499",
+            },
+        }
+    )
+
+    assert enriched == {
+        "dublincore.coverage": "1200/1499",
+        "dublincore.coverage_start": 1200,
+        "dublincore.coverage_start_iso": "1200-01-01",
+        "dublincore.coverage_end": 1499,
+        "dublincore.coverage_end_iso": "1499-12-31",
+        "extensions.dateCreated": "1972",
+        "extensions.dateCreated_start": 1972,
+        "extensions.dateCreated_start_iso": "1972-01-01",
+        "extensions.dateCreated_end": 1972,
+        "extensions.dateCreated_end_iso": "1972-12-31",
+        "extensions.temporalCoverage": "1200/1499",
+        "extensions.temporalCoverage_start": 1200,
+        "extensions.temporalCoverage_start_iso": "1200-01-01",
+        "extensions.temporalCoverage_end": 1499,
+        "extensions.temporalCoverage_end_iso": "1499-12-31",
+    }
+
+
 def test_enrich_temporal_metadata_builds_year_bounds() -> None:
     """Verify that temporal metadata fields produce numeric and ISO year bounds."""
     enriched = enrich_temporal_metadata({"coverage": "1280/1284", "date": 2025})

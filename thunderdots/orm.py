@@ -1,4 +1,4 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 """orm.py
 
@@ -78,6 +78,7 @@ def sanitize_payload_key(key: str) -> str:
 @dataclass(slots=True)
 class Agent:
     """Represents an agent (e.g., creator) associated with a DotsNotice, with optional fields for ID, type, name, and sameAs links."""
+
     id: str | None = None
     type: str | None = None
     name: str | None = None
@@ -88,6 +89,7 @@ class Agent:
 @dataclass(slots=True)
 class DotsNotice:
     """Represents a notice in the Dots system, with fields for ID, type, title, Dublin Core metadata, extensions, fragments, linked parents, and raw data. Provides methods to convert to ElasticSearch and Qdrant payloads, as well as accessors for metadata and creator agents."""
+
     id: str
     type: str
     title: str | None = None

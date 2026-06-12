@@ -81,6 +81,7 @@ def _split_legacy_metadata_paths(paths: list[str]) -> tuple[list[str], list[str]
 @dataclass(slots=True)
 class CollectionParams:
     """Parameters for fetching and processing collections, including which metadata fields to keep and which resource IDs to exclude."""
+
     collection_id: str | None = None
     excluded_ids: list[str] = field(default_factory=list)
     metadata_dublincore: list[str] | None = None
@@ -90,11 +91,11 @@ class CollectionParams:
     def from_dict(cls, d: dict[str, Any] | None) -> "CollectionParams":
         """Create a CollectionParams instance from a dictionary, handling deprecated 'keep_metadata' and splitting it into dublincore and extensions lists if present.
 
-        :param d: The input dictionary containing configuration parameters for collections. May include keys like 'collection_id', 'excluded_ids', 'metadata_dublincore', 'metadata_extensions', and the deprecated 'keep_metadata'.
-        :type d: dict[str, Any] | None
-        :return: A CollectionParams instance populated with the values from the input dictionary, with proper
-    handling of list fields and deprecated 'keep_metadata'.
-        :rtype: CollectionParams
+            :param d: The input dictionary containing configuration parameters for collections. May include keys like 'collection_id', 'excluded_ids', 'metadata_dublincore', 'metadata_extensions', and the deprecated 'keep_metadata'.
+            :type d: dict[str, Any] | None
+            :return: A CollectionParams instance populated with the values from the input dictionary, with proper
+        handling of list fields and deprecated 'keep_metadata'.
+            :rtype: CollectionParams
         """
         d = d or {}
 
@@ -125,8 +126,8 @@ class CollectionParams:
 
 @dataclass(slots=True)
 class ResourceParams:
-    """Parameters for fetching and processing resources, including which metadata fields to keep, how to handle fragments, and other options related to resource processing.
-    """
+    """Parameters for fetching and processing resources, including which metadata fields to keep, how to handle fragments, and other options related to resource processing."""
+
     metadata_dublincore: list[str] | None = None
     metadata_extensions: list[str] | None = None
     add_head_to_content: bool = True
@@ -144,11 +145,11 @@ class ResourceParams:
     def from_dict(cls, d: dict[str, Any] | None) -> "ResourceParams":
         """Create a ResourceParams instance from a dictionary, handling deprecated 'keep_metadata' and splitting it into dublincore and extensions lists if present, as well as properly handling other configuration options.
 
-        :param d: The input dictionary containing configuration parameters for resources. May include keys like 'metadata_dublincore', 'metadata_extensions', 'add_head_to_content', 'include_breadcrumb', 'exclude_heads_contains', 'fetch_document', 'fetch_navigation', 'fragment_mode', 'fragment_xpath', 'title_xpath', 'remove_fragment_heads', 'generated_id_prefix', and the deprecated 'keep_metadata'.
-        :type d: dict[str, Any] | None
-        :return: A ResourceParams instance populated with the values from the input dictionary, with proper
-    handling of list fields, boolean options, and deprecated 'keep_metadata'.
-        :rtype: ResourceParams
+            :param d: The input dictionary containing configuration parameters for resources. May include keys like 'metadata_dublincore', 'metadata_extensions', 'add_head_to_content', 'include_breadcrumb', 'exclude_heads_contains', 'fetch_document', 'fetch_navigation', 'fragment_mode', 'fragment_xpath', 'title_xpath', 'remove_fragment_heads', 'generated_id_prefix', and the deprecated 'keep_metadata'.
+            :type d: dict[str, Any] | None
+            :return: A ResourceParams instance populated with the values from the input dictionary, with proper
+        handling of list fields, boolean options, and deprecated 'keep_metadata'.
+            :rtype: ResourceParams
         """
         d = d or {}
         if d.get("keep_metadata"):
@@ -183,8 +184,8 @@ class ResourceParams:
 
 @dataclass(slots=True)
 class ThunderDotsConfig:
-    """Configuration for ThunderDots, including endpoint URL, options for fetching metadata, validation settings, parameters for collections and resources, concurrency and timeout settings, and output paths.
-    """
+    """Configuration for ThunderDots, including endpoint URL, options for fetching metadata, validation settings, parameters for collections and resources, concurrency and timeout settings, and output paths."""
+
     endpoint_dts: str
     fetch_collection_metadata: bool = True
     fetch_resource_metadata: bool = True

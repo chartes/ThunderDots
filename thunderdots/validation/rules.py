@@ -1,4 +1,4 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 """rules.py
 
@@ -17,6 +17,7 @@ JsonType = Literal["str", "int", "float", "bool", "dict", "list", "null"]
 @dataclass(frozen=True, slots=True)
 class FieldRule:
     """Represents a validation rule for a specific field in the JSON structure, including its path, whether it is required, the allowed types and values, and an optional description."""
+
     path: str
     required: bool = False
     types: tuple[JsonType, ...] = ()
